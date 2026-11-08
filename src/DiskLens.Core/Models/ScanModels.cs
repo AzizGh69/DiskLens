@@ -151,6 +151,51 @@ public sealed class ScanResult
 
         return node;
     }
+
+    /// <summary>
+    /// Updates the results after a file or folder was moved to the Recycle Bin. Its space now sits in this
+    /// drive's <c>$Recycle.Bin</c> until the bin is emptied, so it's moved there instead of disappearing.
+    /// </summary>
+    public void ApplyRecycled(string fullPath, bool isFolder, long size)
+    {
+        string path = fullPath.TrimEnd('\\');
+        long files;
+        if (isFolder)
+        {
+            var node = FindFolder(path);
+            if (node is null || node.IsRoot) return;
+            size = node.Size;
+            files = node.FileCount;
+            node.Detach();
+        }
+        else
+        {
+            var parent = FindFolder(Path.GetDirectoryName(path) ?? "");
+            if (parent is null) return;
+            parent.RemoveOwnFile(size);
+            files = 1;
+            RootFiles.RemoveAll(f => f.FullPath.Equals(path, StringComparison.OrdinalIgnoreCase));
+        }
+
+        string prefix = path + "\\";
+        LargestFiles.RemoveAll(f => f.FullPath.Equals(path, StringComparison.OrdinalIgnoreCase) ||
+                                    (isFolder && f.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
+
+        var bin = Root.FindChild("$Recycle.Bin");
+        if (bin is null)
+        {
+            bin = new FolderNode("$Recycle.Bin", Root);
+            (Root.ChildList ??= new List<FolderNode>()).Add(bin);
+        }
+
+        bin.OwnFilesSize += size;
+        bin.OwnFileCount += files;
+        for (var p = bin; p is not null; p = p.Parent)
+        {
+            p.Size += size;
+            p.FileCount += files;
+        }
+    }
 }
 
 public readonly record struct ScanProgress(long Files, long Bytes, long Folders, int Unreadable, string CurrentFolder);

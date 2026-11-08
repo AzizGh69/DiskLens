@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using DiskLens.Core;
 using DiskLens.Core.Models;
@@ -37,6 +39,7 @@ public sealed class DriveViewModel : ObservableObject
     private string _appsSummary = "";
     private string _systemSummary = "";
     private long? _restorePointBytes;
+    private RecycleGuard? _guard;
 
     public DriveViewModel(VolumeDrive drive, MainViewModel main)
     {
@@ -54,6 +57,7 @@ public sealed class DriveViewModel : ObservableObject
         }, HasPath);
         OpenItemCommand = new RelayCommand(p => OpenItem(p as IPathItem), p => p is IPathItem);
         UninstallWithRevoCommand = new RelayCommand(p => { if (p is AppRowViewModel row) _main.UninstallWithRevo(row.App); }, p => p is AppRowViewModel);
+        RecycleCommand = new RelayCommand(p => Recycle(p as PathItemViewModel), p => p is PathItemViewModel { CanRecycle: true } && !IsScanning);
         RunSystemActionCommand = new RelayCommand(p => { if (p is SystemItemViewModel { Item.Action: { } a }) RunSystemAction(a); },
             p => p is SystemItemViewModel { HasAction: true });
         Browser = new FolderBrowserViewModel(GetBlockReason);
@@ -249,6 +253,7 @@ public sealed class DriveViewModel : ObservableObject
     public ICommand CopyPathCommand { get; }
     public ICommand OpenItemCommand { get; }
     public ICommand UninstallWithRevoCommand { get; }
+    public ICommand RecycleCommand { get; }
 
     public ObservableCollection<SystemItemViewModel> SystemItems { get; } = new();
     public string SystemSummary { get => _systemSummary; private set => SetProperty(ref _systemSummary, value); }
@@ -282,8 +287,67 @@ public sealed class DriveViewModel : ObservableObject
         if (item.FullPath.Length > 0) Shell.ShowInExplorer(item.FullPath);
     }
 
-    /// <summary>Why an item can't go to the Recycle Bin (filled in by the Recycle Bin step).</summary>
-    private string? GetBlockReason(IPathItem item) => "Recycle Bin support is coming in a later step.";
+    /// <summary>Why an item can't go to the Recycle Bin, or null if it can.</summary>
+    private string? GetBlockReason(IPathItem item) => _guard?.BlockReason(item.FullPath) ?? (_guard is null ? "Scan the drive first." : null);
+
+    private RecycleGuard BuildGuard()
+    {
+        var appFolders = _main.InstalledApps
+            .Where(a => a.InstallLocation is not null)
+            .Select(a => (a.InstallLocation!, a.Name))
+            .Concat(_appSizes.Where(a => a.App.IsStoreApp && a.App.InstallLocation is not null).Select(a => (a.App.InstallLocation!, a.App.Name)));
+        return new RecycleGuard(Drive.Root, Drive.HasRecycleBin, appFolders);
+    }
+
+    /// <summary>Asks for confirmation, then moves the item to the Recycle Bin and updates every view.</summary>
+    private void Recycle(PathItemViewModel? item)
+    {
+        if (item is null || _result is null || _guard is null) return;
+        var owner = Application.Current?.MainWindow;
+
+        // Check again right before acting, in case anything changed since the list was built.
+        if (_guard.BlockReason(item.FullPath) is string reason)
+        {
+            MessageBox.Show(owner!, reason, "Can't move to the Recycle Bin", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        string kind = item.IsFolder ? "folder" : "file";
+        string question =
+            $"Move this {kind} to the Recycle Bin?\n\n" +
+            $"{item.Name}\n{Format.Bytes(item.Size)} · {item.FullPath}\n\n" +
+            "You can restore it from the Recycle Bin if you change your mind. " +
+            "The space is freed once you empty the Recycle Bin.";
+        if (MessageBox.Show(owner!, question, "Move to Recycle Bin", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+
+        IntPtr hwnd = owner is null ? IntPtr.Zero : new WindowInteropHelper(owner).Handle;
+        RecycleOutcome outcome;
+        try
+        {
+            outcome = RecycleBin.Move(item.FullPath, hwnd);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(owner!, $"Windows couldn't move \"{item.Name}\" to the Recycle Bin.\n\n{ex.Message}", "DiskLens", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        switch (outcome)
+        {
+            case RecycleOutcome.Moved:
+                _result.ApplyRecycled(item.FullPath, item.IsFolder, item.Size);
+                RefreshResults();
+                _main.ShowBanner($"Moved \"{item.Name}\" ({Format.Bytes(item.Size)}) to the Recycle Bin. Empty the Recycle Bin to get the space back.");
+                break;
+            case RecycleOutcome.Partial:
+                _main.ShowBanner($"Some files in \"{item.Name}\" were in use and stayed where they were. The rest is in the Recycle Bin — rescan to see the new sizes.");
+                break;
+            default:
+                _main.ShowBanner($"\"{item.Name}\" wasn't moved.");
+                break;
+        }
+    }
 
     private void ApplyResult(ScanResult result)
     {
@@ -304,6 +368,7 @@ public sealed class DriveViewModel : ObservableObject
     {
         if (_result is null) return;
         _appSizes = InstalledAppsService.Measure(_result, _main.InstalledApps, Drive.IsWindowsDrive);
+        _guard = BuildGuard();
 
         BuildCategories(_result);
         BuildFileAnswer(_result);

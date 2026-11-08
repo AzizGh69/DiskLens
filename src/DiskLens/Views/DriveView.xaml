@@ -43,6 +43,13 @@
 
         <!-- Right-click menu shared by every list on this page -->
         <ContextMenu x:Key="RowMenu" x:Shared="False">
+            <MenuItem Header="Move to Recycle Bin…" ToolTipService.ShowOnDisabled="True"
+                      ToolTip="{Binding PlacementTarget.SelectedItem.BlockReason, RelativeSource={RelativeSource AncestorType=ContextMenu}, FallbackValue='Select an item first', TargetNullValue='You can restore it from the Recycle Bin later'}"
+                      Command="{Binding PlacementTarget.DataContext.RecycleCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74D;" Margin="0" /></MenuItem.Icon>
+            </MenuItem>
+            <Separator />
             <MenuItem Header="Show in Explorer"
                       Command="{Binding PlacementTarget.DataContext.ShowInExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                       CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
@@ -250,6 +257,15 @@
                         <DockPanel Margin="0,12,0,0">
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding RecycleCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FilesList}"
+                                            ToolTipService.ShowOnDisabled="True"
+                                            ToolTip="{Binding SelectedItem.BlockReason, ElementName=FilesList, FallbackValue='Select an item first', TargetNullValue='Move the selected item to the Recycle Bin (you can restore it later)'}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74D;" />
+                                            <TextBlock Text="Move to Recycle Bin" />
+                                        </StackPanel>
+                                    </Button>
                                     <Button Style="{StaticResource ToolbarButton}" Command="{Binding ShowInExplorerCommand}"
                                             CommandParameter="{Binding SelectedItem, ElementName=FilesList}">
                                         <StackPanel Orientation="Horizontal">
@@ -309,6 +325,15 @@
                         <DockPanel Margin="0,12,0,0">
                             <DockPanel DockPanel.Dock="Top">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding RecycleCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FoldersList}"
+                                            ToolTipService.ShowOnDisabled="True"
+                                            ToolTip="{Binding SelectedItem.BlockReason, ElementName=FoldersList, FallbackValue='Select an item first', TargetNullValue='Move the selected item to the Recycle Bin (you can restore it later)'}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74D;" />
+                                            <TextBlock Text="Move to Recycle Bin" />
+                                        </StackPanel>
+                                    </Button>
                                     <Button Style="{StaticResource ToolbarButton}" Command="{Binding ShowInExplorerCommand}"
                                             CommandParameter="{Binding SelectedItem, ElementName=FoldersList}">
                                         <StackPanel Orientation="Horizontal">
