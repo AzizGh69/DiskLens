@@ -6,6 +6,8 @@ DiskLens runs as administrator, reads every folder on a drive, and gives you str
 wall of numbers: the heaviest **file**, **folder**, **app** and **system item** on each drive. It shows
 what each item is and what you can do about it.
 
+![DiskLens Overview page: drives with used and free space, and each physical disk drawn as a bar of its partitions](docs/overview.png)
+
 ## Features
 
 - **Disks & partitions.** Every physical disk is drawn as a bar split into its partitions: EFI, Recovery,
