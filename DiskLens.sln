@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiskLens.Core", "src\DiskLe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiskLens", "src\DiskLens\DiskLens.csproj", "{73295B8C-564A-46FC-A5C0-80DDD34F8DCB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiskLens.Tests", "tests\DiskLens.Tests\DiskLens.Tests.csproj", "{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +47,18 @@ Global
 		{73295B8C-564A-46FC-A5C0-80DDD34F8DCB}.Release|x64.Build.0 = Release|Any CPU
 		{73295B8C-564A-46FC-A5C0-80DDD34F8DCB}.Release|x86.ActiveCfg = Release|Any CPU
 		{73295B8C-564A-46FC-A5C0-80DDD34F8DCB}.Release|x86.Build.0 = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|x64.Build.0 = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Debug|x86.Build.0 = Debug|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|x64.ActiveCfg = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|x64.Build.0 = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|x86.ActiveCfg = Release|Any CPU
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,5 +66,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{AAD02CFD-33BD-4D5E-98F4-78D2F09BFC90} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{73295B8C-564A-46FC-A5C0-80DDD34F8DCB} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{EEAFE2B2-CCB0-4E20-AC85-8A30FD108B77} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

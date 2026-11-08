@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
@@ -48,9 +48,9 @@ public static class ChartColors
         }
     }
 
-    public static void Apply(Application app)
+    public static void Apply(Application app, string? themeOverride = null)
     {
-        bool dark = IsDarkMode();
+        bool dark = themeOverride is null ? IsDarkMode() : themeOverride == "dark";
         foreach (var (key, (light, darkHex)) in Palette)
         {
             var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(dark ? darkHex : light));
