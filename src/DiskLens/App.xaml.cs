@@ -57,10 +57,20 @@ public partial class App : Application
     {
         try
         {
+            // This folder belongs to the user, but DiskLens runs as administrator: never follow a link someone
+            // put there (it could point at a Windows file). Write a fresh file instead of appending.
             string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiskLens");
-            Directory.CreateDirectory(dir);
+            var folder = Directory.CreateDirectory(dir);
+            if (folder.Attributes.HasFlag(FileAttributes.ReparsePoint)) return "(crash log skipped: its folder is a link)";
+
             string path = Path.Combine(dir, "crash.log");
-            File.AppendAllText(path, $"[{DateTime.Now:u}] {ex}\n\n");
+            if (File.Exists(path) || Directory.Exists(path)) File.Delete(path); // deletes a link itself, never its target
+            using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write($"[{DateTime.Now:u}] {ex}\n");
+            }
+
             return path;
         }
         catch

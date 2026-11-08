@@ -21,7 +21,9 @@ public static class RevoLocator
         {
             try
             {
-                if (!File.Exists(path)) continue;
+                // DiskLens runs as administrator and so would Revo: only trust a copy in Program Files, which
+                // other software can't replace (a per-user registry entry could point anywhere).
+                if (!TrustedPrograms.IsInProtectedFolder(path) || !File.Exists(path)) continue;
                 bool isPro = Path.GetFileName(path).Equals("RevoUninPro.exe", StringComparison.OrdinalIgnoreCase);
                 string version = FileVersionInfo.GetVersionInfo(path).ProductVersion ?? "";
                 return new RevoInstallation(path, isPro, version);

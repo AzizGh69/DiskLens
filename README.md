@@ -46,6 +46,21 @@ anything permanently and never runs cleanup commands itself.
 - installed apps' folders, and folders that contain them: uninstall those with Revo instead
 - drives without a Recycle Bin (FAT32 / removable), where deleting would be permanent
 
+### Privacy & security
+
+- **No internet.** DiskLens has no network code at all: no updates, no telemetry, no accounts. Nothing
+  about your files leaves your PC.
+- **It doesn't open your files.** It reads names and sizes, never file contents, so a booby-trapped file
+  can't attack it the way a malicious video or document can attack a player or viewer.
+- **It only starts programs from Windows or Program Files**, by full path. Revo Uninstaller is only used
+  from Program Files, and Windows tools only from the Windows folder. Since DiskLens runs as
+  administrator, other software can't plant a look-alike program for it to launch.
+- **Open source (MIT).** Every line is here to read, and you can build the exe yourself.
+- The release exe isn't code-signed, so Windows SmartScreen may warn the first time you run it. Each
+  release lists the file's SHA-256 so you can check it (`Get-FileHash DiskLens.exe` in PowerShell).
+- Keep `DiskLens.exe` in a folder of its own (for example `C:\Program Files\DiskLens`) rather than running
+  it straight from Downloads. This is good practice for any program that runs as administrator.
+
 ## Requirements
 
 - Windows 10 or 11 (64-bit)

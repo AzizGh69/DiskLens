@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- dotnet build -p:DevNoElevation=true builds without the UAC prompt, for UI work and screenshots. -->
     <ApplicationManifest Condition="'$(DevNoElevation)' == 'true'">dev.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Product>DiskLens</Product>
     <Description>Admin disk-space analyzer for Windows</Description>
     <Authors>AzizGh69</Authors>
