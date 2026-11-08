@@ -40,6 +40,36 @@
                 </DockPanel>
             </Border>
         </DataTemplate>
+
+        <!-- Right-click menu shared by every list on this page -->
+        <ContextMenu x:Key="RowMenu" x:Shared="False">
+            <MenuItem Header="Show in Explorer"
+                      Command="{Binding PlacementTarget.DataContext.ShowInExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE838;" Margin="0" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Copy path"
+                      Command="{Binding PlacementTarget.DataContext.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE8C8;" Margin="0" /></MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+
+        <Style x:Key="ResultList" TargetType="ListView" BasedOn="{StaticResource GridList}">
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="SelectionMode" Value="Single" />
+            <Setter Property="ContextMenu" Value="{StaticResource RowMenu}" />
+            <EventSetter Event="MouseDoubleClick" Handler="List_MouseDoubleClick" />
+            <EventSetter Event="KeyDown" Handler="List_KeyDown" />
+        </Style>
+
+        <!-- Small toolbar button with an icon -->
+        <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer x:Name="PageScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -193,7 +223,142 @@
                     </StackPanel>
                 </Border>
 
-                <ContentControl x:Name="DetailsHost" Focusable="False" />
+                <TabControl Margin="0,24,0,0" Height="620" SelectedIndex="{Binding SelectedTab}">
+
+                    <!-- Largest files -->
+                    <TabItem Header="Largest files">
+                        <DockPanel Margin="0,12,0,0">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding ShowInExplorerCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FilesList}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE838;" />
+                                            <TextBlock Text="Show in Explorer" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding CopyPathCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FilesList}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE8C8;" />
+                                            <TextBlock Text="Copy path" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource Caption}" FontSize="14" VerticalAlignment="Center" Text="Show" />
+                                <ComboBox Width="300" Margin="10,0,0,0" ItemsSource="{Binding TypeFilters}"
+                                          SelectedItem="{Binding SelectedTypeFilter}" DisplayMemberPath="Label" />
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Text="from the 500 largest files on this drive" />
+                            </DockPanel>
+
+                            <ListView x:Name="FilesList" Style="{StaticResource ResultList}" ItemsSource="{Binding Files}">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Name" Width="330">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding FullPath}">
+                                                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Margin="0,0,10,0" Text="{Binding Glyph}" />
+                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Size" Width="190">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Width="72" Text="{Binding SizeText}" />
+                                                        <ProgressBar Style="{StaticResource ShareBar}" Width="90" Value="{Binding Percent, Mode=OneWay}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Type" Width="150" DisplayMemberBinding="{Binding Group}" />
+                                        <GridViewColumn Header="Modified" Width="110" DisplayMemberBinding="{Binding ModifiedText}" />
+                                        <GridViewColumn Header="Folder" Width="520" DisplayMemberBinding="{Binding Folder}" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </DockPanel>
+                    </TabItem>
+
+                    <!-- Folders -->
+                    <TabItem Header="Folders">
+                        <DockPanel Margin="0,12,0,0">
+                            <DockPanel DockPanel.Dock="Top">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding ShowInExplorerCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FoldersList}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE838;" />
+                                            <TextBlock Text="Show in Explorer" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource ToolbarButton}" Command="{Binding CopyPathCommand}"
+                                            CommandParameter="{Binding SelectedItem, ElementName=FoldersList}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE8C8;" />
+                                            <TextBlock Text="Copy path" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <Button Padding="10,5" Command="{Binding Browser.UpCommand}" ToolTip="Up one level">
+                                    <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74A;" Margin="0" />
+                                </Button>
+                                <ItemsControl ItemsSource="{Binding Browser.Breadcrumbs}" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Padding="6,3" Background="Transparent" BorderThickness="0" Content="{Binding Name}"
+                                                        Command="{Binding DataContext.Browser.NavigateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" />
+                                                <TextBlock Style="{StaticResource Icon}" FontSize="10" Margin="2,0" Text="&#xE76C;"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Margin="2,8,0,8" Text="{Binding Browser.Summary}" />
+
+                            <ListView x:Name="FoldersList" Style="{StaticResource ResultList}" ItemsSource="{Binding Browser.Items}">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Name" Width="380">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding FullPath}">
+                                                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Margin="0,0,10,0" Text="{Binding Glyph}" />
+                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Size" Width="110" DisplayMemberBinding="{Binding SizeText}" />
+                                        <GridViewColumn Header="Share of this folder" Width="220">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ProgressBar Style="{StaticResource ShareBar}" Width="130" Value="{Binding Percent, Mode=OneWay}" />
+                                                        <TextBlock Margin="10,0,0,0" Text="{Binding PercentText}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Contents" Width="360" DisplayMemberBinding="{Binding Details}" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </DockPanel>
+                    </TabItem>
+                </TabControl>
 
                 <TextBlock Style="{StaticResource Caption}" Margin="2,16,0,0" TextWrapping="Wrap" Text="{Binding ResultSummary}" />
             </StackPanel>

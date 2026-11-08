@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,9 @@ public sealed class DriveViewModel : ObservableObject
     private string _progressPath = "";
     private string _resultSummary = "";
     private string? _errorText;
+    private int _selectedTab;
+    private TypeFilterViewModel? _selectedTypeFilter;
+    private List<FileRowViewModel> _allFiles = new();
 
     public DriveViewModel(VolumeDrive drive, MainViewModel main)
     {
@@ -39,6 +43,13 @@ public sealed class DriveViewModel : ObservableObject
         OpenInExplorerCommand = RelayCommand.From(() => Shell.OpenFolder(Drive.Root));
         ScanCommand = RelayCommand.From(StartScan, () => !IsScanning);
         CancelCommand = RelayCommand.From(() => _cts?.Cancel(), () => IsScanning);
+        ShowInExplorerCommand = new RelayCommand(p => { if (p is IPathItem item) Shell.ShowInExplorer(item.FullPath); }, p => p is IPathItem);
+        CopyPathCommand = new RelayCommand(p =>
+        {
+            if (p is IPathItem item && Shell.CopyText(item.FullPath)) _main.ShowBanner($"Copied: {item.FullPath}");
+        }, p => p is IPathItem);
+        OpenItemCommand = new RelayCommand(p => OpenItem(p as IPathItem), p => p is IPathItem);
+        Browser = new FolderBrowserViewModel(GetBlockReason);
 
         HeaviestFile = new AnswerCardViewModel("Heaviest file", "");
         HeaviestFolder = new AnswerCardViewModel("Heaviest folder", "");
@@ -201,6 +212,43 @@ public sealed class DriveViewModel : ObservableObject
 
     public ObservableCollection<CategorySliceViewModel> Categories { get; } = new();
 
+    /// <summary>0 = Largest files, 1 = Folders, 2 = Apps, 3 = System.</summary>
+    public int SelectedTab { get => _selectedTab; set => SetProperty(ref _selectedTab, value); }
+
+    public ObservableCollection<FileRowViewModel> Files { get; } = new();
+    public ObservableCollection<TypeFilterViewModel> TypeFilters { get; } = new();
+
+    public TypeFilterViewModel? SelectedTypeFilter
+    {
+        get => _selectedTypeFilter;
+        set
+        {
+            if (SetProperty(ref _selectedTypeFilter, value)) ApplyTypeFilter();
+        }
+    }
+
+    public FolderBrowserViewModel Browser { get; }
+
+    public ICommand ShowInExplorerCommand { get; }
+    public ICommand CopyPathCommand { get; }
+    public ICommand OpenItemCommand { get; }
+
+    /// <summary>Double-click / Enter: folders open in the Folders tab, everything else is shown in Explorer.</summary>
+    public void OpenItem(IPathItem? item)
+    {
+        if (item is null) return;
+        if (item is FolderItemViewModel { Node: { } node })
+        {
+            Browser.NavigateTo(node);
+            return;
+        }
+
+        Shell.ShowInExplorer(item.FullPath);
+    }
+
+    /// <summary>Why an item can't go to the Recycle Bin (filled in by the Recycle Bin step).</summary>
+    private string? GetBlockReason(IPathItem item) => "Recycle Bin support is coming in a later step.";
+
     private void ApplyResult(ScanResult result)
     {
         _result = result;
@@ -222,6 +270,8 @@ public sealed class DriveViewModel : ObservableObject
         BuildCategories(_result);
         BuildFileAnswer(_result);
         BuildFolderAnswer(_result);
+        BuildFileList(_result);
+        Browser.Reset(Browser.Current is { } current && IsInTree(current, _result.Root) ? current : _result.Root);
         HeaviestApp.Clear("App sizes are coming in the next step.");
         BiggestSystemItem.Clear("System items are coming in a later step.");
     }
@@ -267,8 +317,51 @@ public sealed class DriveViewModel : ObservableObject
         var top = folders[0];
         HeaviestFolder.Set(Format.Bytes(top.Size), top.Name, top.FullPath,
             folders.Skip(1).Select((f, i) => $"{i + 2}. {f.Name} · {Format.Bytes(f.Size)}"),
-            "Open folder", RelayCommand.From(() => Shell.OpenFolder(top.FullPath)));
+            "Look inside", RelayCommand.From(() =>
+            {
+                Browser.NavigateTo(top);
+                SelectedTab = 1;
+            }));
     }
 
-    internal void ApplySnapshotOptions(SnapshotOptions options) { }
+    private void BuildFileList(ScanResult result)
+    {
+        long largest = result.LargestFiles.Count > 0 ? result.LargestFiles[0].Size : 0;
+        _allFiles = result.LargestFiles.Select(f => new FileRowViewModel(f, largest)).ToList();
+        foreach (var row in _allFiles) row.BlockReason = GetBlockReason(row);
+
+        string? previous = SelectedTypeFilter?.Name;
+        TypeFilters.Clear();
+        TypeFilters.Add(new TypeFilterViewModel(TypeFilterViewModel.AllName, _allFiles.Count, _allFiles.Sum(f => f.Size)));
+        foreach (var group in FileTypes.Groups)
+        {
+            var inGroup = _allFiles.Where(f => f.Group == group).ToList();
+            if (inGroup.Count > 0) TypeFilters.Add(new TypeFilterViewModel(group, inGroup.Count, inGroup.Sum(f => f.Size)));
+        }
+
+        _selectedTypeFilter = TypeFilters.FirstOrDefault(f => f.Name == previous) ?? TypeFilters[0];
+        OnPropertyChanged(nameof(SelectedTypeFilter));
+        ApplyTypeFilter();
+    }
+
+    private void ApplyTypeFilter()
+    {
+        string name = SelectedTypeFilter?.Name ?? TypeFilterViewModel.AllName;
+        Files.Clear();
+        foreach (var row in _allFiles)
+            if (name == TypeFilterViewModel.AllName || row.Group == name) Files.Add(row);
+    }
+
+    private static bool IsInTree(FolderNode node, FolderNode root)
+    {
+        var top = node;
+        while (top.Parent is not null) top = top.Parent;
+        return ReferenceEquals(top, root);
+    }
+
+    internal void ApplySnapshotOptions(SnapshotOptions options)
+    {
+        if (options.Folder is string folder && _result?.FindFolder(folder) is { } node) Browser.NavigateTo(node);
+        if (options.Tab is int tab) SelectedTab = tab;
+    }
 }

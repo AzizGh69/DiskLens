@@ -165,6 +165,27 @@ public sealed class Scanner
         }
     }
 
+    /// <summary>Lists the largest files directly inside one folder (used when browsing folders).</summary>
+    public static List<FileEntry> ListFiles(string folder, int max)
+    {
+        var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0, RecurseSubdirectories = false };
+        try
+        {
+            var files = new FileSystemEnumerable<FileEntry>(folder,
+                (ref FileSystemEntry e) => new FileEntry(e.ToFullPath(),
+                    (e.Attributes & CloudOnlyAttributes) != 0 ? 0 : e.Length, e.LastWriteTimeUtc.UtcDateTime),
+                options)
+            {
+                ShouldIncludePredicate = (ref FileSystemEntry e) => !e.IsDirectory,
+            };
+            return files.OrderByDescending(f => f.Size).Take(max).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new List<FileEntry>();
+        }
+    }
+
     /// <summary>Adds up sizes bottom-up and sorts every folder's children biggest first.</summary>
     internal static void ComputeTotals(FolderNode root)
     {
