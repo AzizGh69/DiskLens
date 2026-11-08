@@ -35,6 +35,8 @@ public sealed class DriveViewModel : ObservableObject
     private List<FileRowViewModel> _allFiles = new();
     private List<AppSize> _appSizes = new();
     private string _appsSummary = "";
+    private string _systemSummary = "";
+    private long? _restorePointBytes;
 
     public DriveViewModel(VolumeDrive drive, MainViewModel main)
     {
@@ -52,6 +54,8 @@ public sealed class DriveViewModel : ObservableObject
         }, HasPath);
         OpenItemCommand = new RelayCommand(p => OpenItem(p as IPathItem), p => p is IPathItem);
         UninstallWithRevoCommand = new RelayCommand(p => { if (p is AppRowViewModel row) _main.UninstallWithRevo(row.App); }, p => p is AppRowViewModel);
+        RunSystemActionCommand = new RelayCommand(p => { if (p is SystemItemViewModel { Item.Action: { } a }) RunSystemAction(a); },
+            p => p is SystemItemViewModel { HasAction: true });
         Browser = new FolderBrowserViewModel(GetBlockReason);
 
         HeaviestFile = new AnswerCardViewModel("Heaviest file", "");
@@ -162,7 +166,13 @@ public sealed class DriveViewModel : ObservableObject
         {
             var scanner = _scanner;
             var token = _cts.Token;
-            var result = await Task.Run(() => scanner.Scan(Drive.Root, token), token);
+            char letter = Drive.Letter;
+            var (result, restore) = await Task.Run(() =>
+            {
+                var scan = scanner.Scan(Drive.Root, token);
+                return (scan, SystemItemsService.RestorePointBytes(letter));
+            }, token);
+            _restorePointBytes = restore;
             ApplyResult(result);
         }
         catch (OperationCanceledException)
@@ -240,6 +250,13 @@ public sealed class DriveViewModel : ObservableObject
     public ICommand OpenItemCommand { get; }
     public ICommand UninstallWithRevoCommand { get; }
 
+    public ObservableCollection<SystemItemViewModel> SystemItems { get; } = new();
+    public string SystemSummary { get => _systemSummary; private set => SetProperty(ref _systemSummary, value); }
+    public ICommand RunSystemActionCommand { get; }
+
+    /// <summary>Opens the Windows tool for a system item. DiskLens itself never deletes system files.</summary>
+    private static void RunSystemAction(SystemAction action) => Shell.Start(action.Target, action.Arguments);
+
     /// <summary>"Uninstall with Revo", or a generic label when Revo isn't installed.</summary>
     public string UninstallActionText => _main.UninstallActionText;
 
@@ -294,8 +311,37 @@ public sealed class DriveViewModel : ObservableObject
         BuildAppAnswer();
         BuildFileList(_result);
         BuildAppList();
+        BuildSystemItems(_result);
         Browser.Reset(Browser.Current is { } current && IsInTree(current, _result.Root) ? current : _result.Root);
-        BiggestSystemItem.Clear("System items are coming in a later step.");
+    }
+
+    private void BuildSystemItems(ScanResult result)
+    {
+        var items = SystemItemsService.Find(result, _restorePointBytes);
+        long largest = items.Count > 0 ? items[0].Size : 0;
+        SystemItems.Clear();
+        foreach (var item in items) SystemItems.Add(new SystemItemViewModel(item, largest));
+
+        string restoreNote = _restorePointBytes is null && Drive.FileSystem == "NTFS"
+            ? " · Restore points can only be measured when DiskLens runs as administrator."
+            : "";
+        SystemSummary = items.Count == 0
+            ? "No large system files on this drive." + restoreNote
+            : $"{items.Count} items · {Format.Bytes(items.Sum(i => i.Size))}. DiskLens never deletes these — each card says what is safe and opens the Windows tool for it.{restoreNote}";
+
+        if (items.Count == 0)
+        {
+            BiggestSystemItem.Clear("No large system files on this drive.");
+            return;
+        }
+
+        var top = SystemItems[0];
+        var action = top.Item.Action is { } a
+            ? (top.ActionText, RelayCommand.From(() => RunSystemAction(a)))
+            : ("What can I do?", RelayCommand.From(() => SelectedTab = 3));
+        BiggestSystemItem.Set(top.SizeText, top.Name, top.WhatItIs,
+            SystemItems.Skip(1).Take(2).Select((s, i) => $"{i + 2}. {s.Name} · {s.SizeText}"),
+            action.Item1, action.Item2);
     }
 
     private void BuildCategories(ScanResult result)

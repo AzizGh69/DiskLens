@@ -458,6 +458,73 @@
                             </ListView>
                         </DockPanel>
                     </TabItem>
+
+                    <!-- System -->
+                    <TabItem Header="System">
+                        <DockPanel Margin="0,12,0,0">
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" FontSize="14" Margin="0,0,0,10"
+                                       TextWrapping="Wrap" Text="{Binding SystemSummary}" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding SystemItems}" Margin="0,0,8,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:SystemItemViewModel}">
+                                            <Border Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="36" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="170" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Style="{StaticResource Icon}" VerticalAlignment="Top" Margin="0,2,0,0" FontSize="18"
+                                                               Text="{Binding Glyph}" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+
+                                                    <StackPanel Grid.Column="1" Margin="0,0,24,0">
+                                                        <TextBlock Style="{StaticResource BodyStrong}" Text="{Binding Name}" />
+                                                        <TextBlock Style="{StaticResource Body}" Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding WhatItIs}" />
+                                                        <DockPanel Margin="0,8,0,0">
+                                                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Icon}" FontSize="12" VerticalAlignment="Top" Margin="0,2,8,0"
+                                                                       Text="&#xE82F;" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            <TextBlock Style="{StaticResource Caption}" FontSize="13" TextWrapping="Wrap" Text="{Binding Tip}" />
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,6,0,0" Visibility="{Binding HasSizeNote, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Icon}" FontSize="12" VerticalAlignment="Top" Margin="0,2,8,0"
+                                                                       Text="&#xE946;" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            <TextBlock Style="{StaticResource Caption}" FontSize="13" TextWrapping="Wrap" Text="{Binding SizeNote}" />
+                                                        </DockPanel>
+                                                        <TextBlock Style="{StaticResource Caption}" Margin="0,6,0,0" Text="{Binding FullPath}" ToolTip="{Binding FullPath}"
+                                                                   Visibility="{Binding HasPath, Converter={StaticResource BoolToVisibility}}" />
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="0,0,16,0">
+                                                        <TextBlock Style="{StaticResource BodyStrong}" FontSize="18" Text="{Binding SizeText}" />
+                                                        <ProgressBar Style="{StaticResource ShareBar}" Margin="0,8,0,0" Value="{Binding Percent, Mode=OneWay}" />
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="3" VerticalAlignment="Top" MinWidth="190">
+                                                        <Button HorizontalAlignment="Stretch" Padding="12,5" Content="{Binding ActionText}"
+                                                                Command="{Binding DataContext.RunSystemActionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding HasAction, Converter={StaticResource BoolToVisibility}}" />
+                                                        <Button HorizontalAlignment="Stretch" Padding="12,5" Margin="0,6,0,0"
+                                                                Command="{Binding DataContext.ShowInExplorerCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding HasPath, Converter={StaticResource BoolToVisibility}}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE838;" />
+                                                                <TextBlock Text="Show in Explorer" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
                 </TabControl>
 
                 <TextBlock Style="{StaticResource Caption}" Margin="2,16,0,0" TextWrapping="Wrap" Text="{Binding ResultSummary}" />

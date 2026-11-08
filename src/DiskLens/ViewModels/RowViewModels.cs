@@ -144,6 +144,42 @@ public sealed class AppRowViewModel : PathItemViewModel
     public string Location => App.InstallLocation ?? "Folder not recorded by the installer";
 }
 
+/// <summary>A card in the System tab.</summary>
+public sealed class SystemItemViewModel : PathItemViewModel
+{
+    public SystemItemViewModel(SystemItem item, long largest)
+    {
+        Item = item;
+        Percent = Format.Share(item.Size, largest);
+        BlockReason = "Windows manages this. Use the Windows tool on its card instead of deleting it.";
+    }
+
+    public SystemItem Item { get; }
+
+    public override string FullPath => Item.Path ?? "";
+    public override string Name => Item.Name;
+    public override long Size => Item.Size;
+    public override bool IsFolder => Item.IsFolder;
+
+    public string SizeText => Format.Bytes(Item.Size);
+    public double Percent { get; }
+    public string WhatItIs => Item.WhatItIs;
+    public string Tip => Item.Tip;
+    public string? SizeNote => Item.SizeNote;
+    public bool HasSizeNote => Item.SizeNote is not null;
+    public bool HasPath => Item.Path is not null;
+    public bool HasAction => Item.Action is not null;
+    public string ActionText => Item.Action?.Label ?? "";
+
+    public string Glyph => Item switch
+    {
+        { Path: null } => "",              // history: restore points
+        { Name: "Recycle Bin" } => "",     // delete
+        { IsFolder: true } => "",          // folder
+        _ => "",                           // page
+    };
+}
+
 public sealed class TypeFilterViewModel
 {
     public TypeFilterViewModel(string name, int count, long bytes)
