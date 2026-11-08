@@ -63,8 +63,8 @@ public sealed class VolumeDrive
     public string Root => $"{Letter}:\\";
     public string Label { get; init; } = "";
     public string FileSystem { get; init; } = "";
-    public long TotalSize { get; init; }
-    public long FreeSpace { get; init; }
+    public long TotalSize { get; set; }
+    public long FreeSpace { get; set; }
     public DriveType DriveType { get; init; }
     public bool IsWindowsDrive { get; init; }
     public int? DiskNumber { get; set; }

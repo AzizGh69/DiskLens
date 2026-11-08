@@ -89,5 +89,7 @@
     </Style>
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    <c:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    <c:NullToCollapsedConverter x:Key="NullToCollapsed" />
 
 </ResourceDictionary>

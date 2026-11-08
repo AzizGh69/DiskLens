@@ -38,7 +38,9 @@ public static class Format
     public static string Count(long count) => count.ToString("N0", CultureInfo.CurrentCulture);
 
     public static string Duration(TimeSpan span) =>
-        span.TotalSeconds < 60 ? $"{span.TotalSeconds:0} s" : $"{(int)span.TotalMinutes} min {span.Seconds} s";
+        span.TotalSeconds < 1 ? "under a second"
+        : span.TotalSeconds < 60 ? $"{span.TotalSeconds:0} s"
+        : $"{(int)span.TotalMinutes} min {span.Seconds} s";
 
     /// <summary>Share of <paramref name="part"/> in <paramref name="whole"/> as 0–100.</summary>
     public static double Share(long part, long whole) => whole <= 0 ? 0 : Math.Clamp(part * 100.0 / whole, 0, 100);

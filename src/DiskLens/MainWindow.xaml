@@ -64,7 +64,7 @@
                                     <TextBlock Style="{StaticResource Body}" Text="{Binding Title}" />
                                     <c:UsageBar Style="{StaticResource LowAwareUsageBar}" Used="{Binding Used}" Total="{Binding Total}"
                                                 Height="4" Margin="0,6,0,4" />
-                                    <TextBlock Style="{StaticResource Caption}" Text="{Binding FreeText}" />
+                                    <TextBlock Style="{StaticResource Caption}" Text="{Binding SidebarCaption}" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>

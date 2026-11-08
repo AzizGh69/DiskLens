@@ -86,6 +86,12 @@ public sealed class MainViewModel : ObservableObject
             await drive.ScanAsync();
     }
 
+    public void NotifyScanStateChanged()
+    {
+        OnPropertyChanged(nameof(IsScanningAny));
+        CommandManager.InvalidateRequerySuggested();
+    }
+
     public void ShowBanner(string text)
     {
         BannerText = text;

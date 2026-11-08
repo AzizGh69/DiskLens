@@ -55,6 +55,20 @@ public static class DiskInfoService
         return snapshot;
     }
 
+    /// <summary>Re-reads a drive's size and free space (they change as files are added or removed).</summary>
+    public static void RefreshSpace(VolumeDrive drive)
+    {
+        try
+        {
+            var info = new DriveInfo(drive.Root);
+            if (!info.IsReady) return;
+            drive.TotalSize = info.TotalSize;
+            drive.FreeSpace = info.TotalFreeSpace;
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
     private static DriveInfo[] SafeGetDrives()
     {
         try { return DriveInfo.GetDrives(); }
