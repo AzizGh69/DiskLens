@@ -33,6 +33,8 @@ public sealed class DriveViewModel : ObservableObject
     private int _selectedTab;
     private TypeFilterViewModel? _selectedTypeFilter;
     private List<FileRowViewModel> _allFiles = new();
+    private List<AppSize> _appSizes = new();
+    private string _appsSummary = "";
 
     public DriveViewModel(VolumeDrive drive, MainViewModel main)
     {
@@ -43,12 +45,13 @@ public sealed class DriveViewModel : ObservableObject
         OpenInExplorerCommand = RelayCommand.From(() => Shell.OpenFolder(Drive.Root));
         ScanCommand = RelayCommand.From(StartScan, () => !IsScanning);
         CancelCommand = RelayCommand.From(() => _cts?.Cancel(), () => IsScanning);
-        ShowInExplorerCommand = new RelayCommand(p => { if (p is IPathItem item) Shell.ShowInExplorer(item.FullPath); }, p => p is IPathItem);
+        ShowInExplorerCommand = new RelayCommand(p => { if (p is IPathItem item) Shell.ShowInExplorer(item.FullPath); }, HasPath);
         CopyPathCommand = new RelayCommand(p =>
         {
             if (p is IPathItem item && Shell.CopyText(item.FullPath)) _main.ShowBanner($"Copied: {item.FullPath}");
-        }, p => p is IPathItem);
+        }, HasPath);
         OpenItemCommand = new RelayCommand(p => OpenItem(p as IPathItem), p => p is IPathItem);
+        UninstallWithRevoCommand = new RelayCommand(p => { if (p is AppRowViewModel row) _main.UninstallWithRevo(row.App); }, p => p is AppRowViewModel);
         Browser = new FolderBrowserViewModel(GetBlockReason);
 
         HeaviestFile = new AnswerCardViewModel("Heaviest file", "");
@@ -229,21 +232,37 @@ public sealed class DriveViewModel : ObservableObject
 
     public FolderBrowserViewModel Browser { get; }
 
+    public ObservableCollection<AppRowViewModel> Apps { get; } = new();
+    public string AppsSummary { get => _appsSummary; private set => SetProperty(ref _appsSummary, value); }
+
     public ICommand ShowInExplorerCommand { get; }
     public ICommand CopyPathCommand { get; }
     public ICommand OpenItemCommand { get; }
+    public ICommand UninstallWithRevoCommand { get; }
 
-    /// <summary>Double-click / Enter: folders open in the Folders tab, everything else is shown in Explorer.</summary>
+    /// <summary>"Uninstall with Revo", or a generic label when Revo isn't installed.</summary>
+    public string UninstallActionText => _main.UninstallActionText;
+
+    private static bool HasPath(object? p) => p is IPathItem { FullPath.Length: > 0 };
+
+    /// <summary>Double-click / Enter: folders (and app folders) open in the Folders tab, files are shown in Explorer.</summary>
     public void OpenItem(IPathItem? item)
     {
         if (item is null) return;
-        if (item is FolderItemViewModel { Node: { } node })
+        var node = item switch
+        {
+            FolderItemViewModel f => f.Node,
+            AppRowViewModel a => a.Folder,
+            _ => null,
+        };
+        if (node is not null)
         {
             Browser.NavigateTo(node);
+            SelectedTab = 1;
             return;
         }
 
-        Shell.ShowInExplorer(item.FullPath);
+        if (item.FullPath.Length > 0) Shell.ShowInExplorer(item.FullPath);
     }
 
     /// <summary>Why an item can't go to the Recycle Bin (filled in by the Recycle Bin step).</summary>
@@ -267,18 +286,22 @@ public sealed class DriveViewModel : ObservableObject
     private void RefreshResults()
     {
         if (_result is null) return;
+        _appSizes = InstalledAppsService.Measure(_result, _main.InstalledApps, Drive.IsWindowsDrive);
+
         BuildCategories(_result);
         BuildFileAnswer(_result);
         BuildFolderAnswer(_result);
+        BuildAppAnswer();
         BuildFileList(_result);
+        BuildAppList();
         Browser.Reset(Browser.Current is { } current && IsInTree(current, _result.Root) ? current : _result.Root);
-        HeaviestApp.Clear("App sizes are coming in the next step.");
         BiggestSystemItem.Clear("System items are coming in a later step.");
     }
 
     private void BuildCategories(ScanResult result)
     {
-        var b = Categorizer.Compute(result, Drive.UsedSpace, Drive.FreeSpace);
+        var appFolders = _appSizes.Where(a => a.Folder is not null).Select(a => a.Folder!);
+        var b = Categorizer.Compute(result, Drive.UsedSpace, Drive.FreeSpace, appFolders);
         long total = b.Total;
 
         Categories.Clear();
@@ -322,6 +345,39 @@ public sealed class DriveViewModel : ObservableObject
                 Browser.NavigateTo(top);
                 SelectedTab = 1;
             }));
+    }
+
+    private void BuildAppAnswer()
+    {
+        if (_appSizes.Count == 0)
+        {
+            HeaviestApp.Clear(Drive.IsWindowsDrive || _main.InstalledApps.Count == 0
+                ? "No installed apps found."
+                : "No installed apps live on this drive.");
+            return;
+        }
+
+        var top = _appSizes[0];
+        string detail = top.App.InstallLocation ?? (top.App.Publisher.Length > 0 ? top.App.Publisher : "Folder not recorded");
+        string size = (top.IsEstimate ? "≈ " : "") + Format.Bytes(top.Size);
+        var app = top.App;
+        HeaviestApp.Set(size, app.Name, detail,
+            _appSizes.Skip(1).Take(2).Select((a, i) => $"{i + 2}. {a.App.Name} · {(a.IsEstimate ? "≈ " : "")}{Format.Bytes(a.Size)}"),
+            UninstallActionText, RelayCommand.From(() => _main.UninstallWithRevo(app)));
+    }
+
+    private void BuildAppList()
+    {
+        long largest = _appSizes.Count > 0 ? _appSizes[0].Size : 0;
+        Apps.Clear();
+        foreach (var size in _appSizes) Apps.Add(new AppRowViewModel(size, largest));
+
+        long total = _appSizes.Sum(a => a.Size);
+        int estimates = _appSizes.Count(a => a.IsEstimate);
+        string estimateNote = estimates > 0 ? " · ≈ means the size the app's installer reported, because its folder couldn't be measured" : "";
+        AppsSummary = _appSizes.Count == 0
+            ? "No installed apps were found on this drive."
+            : $"{Format.Count(_appSizes.Count)} apps · {Format.Bytes(total)} in total{estimateNote}";
     }
 
     private void BuildFileList(ScanResult result)

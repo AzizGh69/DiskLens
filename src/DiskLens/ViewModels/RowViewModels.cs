@@ -1,6 +1,7 @@
 using System.Globalization;
 using DiskLens.Core;
 using DiskLens.Core.Models;
+using DiskLens.Core.Services;
 using DiskLens.Mvvm;
 
 namespace DiskLens.ViewModels;
@@ -107,6 +108,40 @@ public sealed class FolderItemViewModel : PathItemViewModel
     public double Percent { get; }
     public string PercentText => Format.Percent(Percent);
     public string Details { get; }
+}
+
+/// <summary>A row in the Apps tab.</summary>
+public sealed class AppRowViewModel : PathItemViewModel
+{
+    public AppRowViewModel(AppSize size, long largest)
+    {
+        AppSize = size;
+        Percent = Format.Share(size.Size, largest);
+        BlockReason = "Apps should be removed with an uninstaller (Revo), not by deleting their folder.";
+    }
+
+    public AppSize AppSize { get; }
+    public InstalledApp App => AppSize.App;
+
+    public override string FullPath => App.InstallLocation ?? "";
+    public override string Name => App.Name;
+    public override long Size => AppSize.Size;
+    public override bool IsFolder => true;
+
+    public FolderNode? Folder => AppSize.Folder;
+    public bool HasLocation => App.InstallLocation is not null;
+    public string Glyph => App.IsStoreApp ? "" : "";
+
+    /// <summary>"≈" marks the installer's own estimate (the folder wasn't measured).</summary>
+    public string SizeText => AppSize.IsEstimate ? "≈ " + Format.Bytes(Size) : Format.Bytes(Size);
+    public string SizeToolTip => AppSize.IsEstimate
+        ? "Estimate reported by the app's installer — its folder couldn't be measured."
+        : "Measured from the scan of its folder.";
+
+    public double Percent { get; }
+    public string Publisher => App.Publisher;
+    public string Version => App.Version;
+    public string Location => App.InstallLocation ?? "Folder not recorded by the installer";
 }
 
 public sealed class TypeFilterViewModel

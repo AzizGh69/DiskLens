@@ -41,7 +41,16 @@
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel x:Name="SidebarFooter" DockPanel.Dock="Bottom" />
+                <StackPanel x:Name="SidebarFooter" DockPanel.Dock="Bottom">
+                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="12,8"
+                            Command="{Binding OpenRevoCommand}" ToolTip="{Binding RevoCaption}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ButtonIcon}" Text="&#xE74D;" Margin="0,0,10,0" />
+                            <TextBlock Text="{Binding RevoButtonText}" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Style="{StaticResource Caption}" Margin="2,6,0,0" TextWrapping="Wrap" Text="{Binding RevoCaption}" />
+                </StackPanel>
 
                 <ListBox Margin="-8,20,-8,12" Background="Transparent" BorderThickness="0"
                          ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}"
